@@ -1,20 +1,22 @@
 % Function called by: Experiment.m
 % Role of function is to run a trial of the experiment
 % color_list.grey: 
-%   - Parameters (Things to be used for the experiment)
-%   - trial_idx (the index of the current trial)
-%   - player_data.score_total (the total player_data.score so far)
-%   - cpu (the handle to the cpu player)
-%   - type (the type of trial [prison or hunt])
-%   - layout (the layout type for the options)
+%   - Parameters    (Things to be used for the experiment)
+%   - Cpu           (The opponent that will be used for this trial)
+%   - Duration      (How long the player has to react to the events on screen)
+%   - Score_Row     (A list with the scores shuffled order for this Trial
+%   - Instance_Idx  (Where in the trial we are)
+%   - Layout        (Which layout to use)
+%   - Trial_Total   (How much the player has scored so far in the trial)
 % Return Values: 
-%   - player_data.score (the player_data.score the player just earned)
-%   - pl_coop (whether or not the player cooperated)
+%   - player_data   (Data on the player's performance)
+%   - Trial_Total   (The updated total of all the trials)
 
 function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_Row, Instance_Idx, Layout, Trial_Total)
     load('colors.mat','color_list');
 
     %% PRE STAGE - Before the timer of the activity starts
+    % Create a list of he targets and the data that will be used for them (Assume first layout)       
     targets = [struct('Text', 'Split', 'TextColor', Parameters.target.split.text,...
                       'FillColor', Parameters.target.split.circle, 'Value', true, ...
                       'Coords', [0, Parameters.screen.window_height], 'Icon', 'Split_iconW.png', ...
@@ -27,6 +29,7 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
                       'TextCoords', [Parameters.screen.window_width - 300, Parameters.screen.window_height - 40], ...
                       'IconRect', [Parameters.screen.window_width-370, Parameters.screen.window_height - 450, ...
                                    Parameters.screen.window_width-70, Parameters.screen.window_height - 150])];
+    % If the layout is different, adjust the variables.
     if Layout == 2
         targets(1).Coords = Parameters.screen.window_dims;
         targets(1).TextCoords = [Parameters.screen.window_width - 300, ...
@@ -38,14 +41,15 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
         targets(2).IconRect = [70, Parameters.screen.window_height - 450, ...
                                370, Parameters.screen.window_height - 150];
     end
-
+    
+    % Generate the rect value for the targets
     for idx = 1:length(targets)
         targets(idx).Rect = [targets(idx).Coords(1) - Parameters.target.radius, ...
                              targets(idx).Coords(2) - Parameters.target.radius,...
                              targets(idx).Coords(1) + Parameters.target.radius, ...
                              targets(idx).Coords(2) + Parameters.target.radius];
     end
-
+    
     prizebox_height = 70;
     timebar_height = 10;
     
@@ -75,8 +79,8 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
         % PAINT THE PICTURE
         % Print Upper Info
         % Print the current money
-        DrawPrizes(Parameters.screen.window, [Parameters.screen.window_width, prizebox_height], ...
-                   Parameters.trial.scores, Score_Row, Score_Row(Instance_Idx), Parameters.text.size.prizes);
+        % DrawPrizes(Parameters.screen.window, [Parameters.screen.window_width, prizebox_height], ...
+        %            Parameters.trial.scores, Score_Row, Score_Row(Instance_Idx), Parameters.text.size.prizes);
         DrawPrize2(Parameters.screen.window, [Parameters.screen.window_width, prizebox_height], ...
                    Parameters.trial.scores, Score_Row, Score_Row(Instance_Idx), Parameters.text.size.prizes, Trial_Total);
         Screen('TextSize', Parameters.screen.window, Parameters.text.size.default);
@@ -93,7 +97,7 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
                [0,prizebox_height,Parameters.screen.window_width,prizebox_height+timebar_height]);
         Screen('FillRect', Parameters.screen.window, timebar_color, timeRect);
         
-        % Print the total player_data.score
+        % % Print the total player_data.score
         % player_data.score_text = sprintf('Total player_data.score: %d', Trial_Total.player);
         % DrawFormattedText(Parameters.screen.window, player_data.score_text, 0, prizebox_height+timebar_height+20, [200, 200, 200, 255]);
 
@@ -125,11 +129,13 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
     [player_data.score, cpu_player_data.score] = deal(0);
     result_text = '';
     
+    % Based on the player's choice, determine which direction the player took    
     if Layout == 1; directions = ["Nowhere", "Right", "Left"];
     else; directions = ["Nowhere", "Left", "Right"];
     end
     player_data.dir = directions(player_data.choice+2);
 
+    % Based on the player's and cpu's choice, determine outcome and scoring
     switch player_data.choice
         case -1         %If we failed to make a choice, give the money to the cpu
             player_data.score = 0;
@@ -162,9 +168,11 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
                 result_text = sprintf('%sYour opponent earns $%d, and you get nothing.',result_text, Score_Row(Instance_Idx));
             end
     end
+
+    % Update the total scores of the trial
     Trial_Total.player = Trial_Total.player + player_data.score;
     Trial_Total.cpu = Trial_Total.cpu + cpu_player_data.score;
-
+    
     total_text = sprintf('You haved earned $%d so far!\n Your opponent has earned $%d', Trial_Total.player, Trial_Total.cpu);
     skip_text = 'Press any button to skip.';
    
@@ -196,6 +204,7 @@ function [player_data, Trial_Total] = RunTrial(Parameters, Cpu, Duration, Score_
     WaitSecs(0.3);
 end
 
+%% HELPER FUNCTIONS
 function DrawPrizes(Win, Dims, Norm_Prizes, Sfld_Prizes, Curr_Prize, Text_Size)
     load('colors.mat','color_list'); 
     Screen('TextSize', Win, Text_Size);
@@ -266,7 +275,6 @@ function DrawPrize2(Win, Dims, Norm_Prizes, Sfld_Prizes, Curr_Prize, Text_Size, 
     
         xaxis_offset = xaxis_offset + round( part_dims(1)/(length(Norm_Prizes) + 1) );
     end
-
     part_xoffset = part_xoffset + part_dims(1);
 
     % Draw your current total:

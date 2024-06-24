@@ -1,7 +1,0 @@
-function TrialSwitch(Trial_Idx, Trial_Num)
-    if Trial_Idx == TrialNum; return; end
-
-    text = sprintf('Trial %d Complete! %d more to go!\n\n\n', Trial_Idx, Trial_Num-Trial_Idx);
-    text = sprintf('%sPress any button to continue)')
-end
-
